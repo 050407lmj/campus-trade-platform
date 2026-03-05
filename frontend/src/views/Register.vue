@@ -210,44 +210,76 @@ import { ElMessage } from 'element-plus'
 import { User, Lock, ChatDotRound, School, Calendar, ArrowRight } from '@element-plus/icons-vue'
 import { register } from '@/api/user'
 
-const router = useRouter()
-const formRef = ref(null)
+/**
+ * Register.vue - 注册页面组件
+ * 
+ * 功能：
+ * 1. 提供用户注册表单
+ * 2. 验证用户输入（必填项和选填项）
+ * 3. 调用后端 API 进行注册
+ * 4. 注册成功后跳转到登录页
+ */
 
+const router = useRouter()  // 路由实例
+const formRef = ref(null)   // 表单引用，用于表单验证
+
+/**
+ * 注册表单数据
+ */
 const form = reactive({
-  username: '',
-  password: '',
-  wechatId: '',
-  major: '',
-  grade: '',
-  gender: ''
+  username: '',    // 用户名（必填）
+  password: '',    // 密码（必填）
+  wechatId: '',    // 微信号（选填）
+  major: '',       // 专业（选填）
+  grade: '',       // 年级（选填）
+  gender: ''       // 性别（选填）
 })
 
+/**
+ * 表单验证规则
+ * 只验证必填字段
+ */
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],  // 必填项
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]     // 必填项
 }
 
+/**
+ * 处理注册逻辑
+ * 1. 验证表单
+ * 2. 调用注册 API
+ * 3. 注册成功后跳转到登录页
+ */
 const handleRegister = async () => {
   if (!formRef.value) return
 
   try {
+    // 表单验证
     const valid = await formRef.value.validate()
     if (!valid) return
     
+    // 调用注册 API
     const res = await register(form)
+    
+    // 处理注册结果
     if (res.success) {
       ElMessage.success('注册成功，请登录')
+      // 跳转到登录页
       await router.replace('/login')
     } else {
       ElMessage.error(res.message || '注册失败')
     }
   } catch (error) {
+    // 错误处理
     if (error !== false) {
       ElMessage.error('注册失败：' + error.message)
     }
   }
 }
 
+/**
+ * 跳转到登录页面
+ */
 const goToLogin = () => {
   router.push('/login')
 }

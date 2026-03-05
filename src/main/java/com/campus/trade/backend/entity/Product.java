@@ -23,7 +23,7 @@ public class Product {
     @Column(nullable = false)
     private Double price; // 商品价格
 
-    @Column(length = 5000)
+    @Column(length = 50000)
     private String imageUrl; // 商品图片路径/URL
 
     @Column(nullable = false)

@@ -36,6 +36,10 @@
             </div>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item @click="goToProfile">
+                  <el-icon><User /></el-icon>
+                  个人信息
+                </el-dropdown-item>
                 <el-dropdown-item @click="handleLogout">
                   <el-icon><SwitchButton /></el-icon>
                   退出登录
@@ -142,7 +146,7 @@
                 <el-image
                   :src="product.imageUrl || getDefaultImage()"
                   :alt="product.name"
-                  fit="cover"
+                  fit="contain"
                   class="image"
                 >
                   <template #error>
@@ -200,7 +204,7 @@
                 <el-image
                   :src="product.imageUrl || getDefaultImage()"
                   :alt="product.name"
-                  fit="cover"
+                  fit="contain"
                   class="list-image"
                 >
                   <template #error>
@@ -268,36 +272,62 @@ import {
 } from '@element-plus/icons-vue'
 import { getProductList } from '@/api/product'
 
-const router = useRouter()
-const loading = ref(true)
-const products = ref([])
-const currentUser = ref(null)
-const searchQuery = ref('')
-const viewMode = ref('grid')
-const unreadCount = ref(0)
+/**
+ * Home.vue - 首页组件（商品列表页）
+ * 
+ * 功能：
+ * 1. 显示商品列表（网格视图和列表视图）
+ * 2. 商品搜索功能
+ * 3. 统计信息展示
+ * 4. 导航栏（发布商品、消息、用户信息、退出登录）
+ * 5. 跳转到商品详情、发布页、聊天页等
+ */
 
-// 计算属性
+const router = useRouter()  // 路由实例
+const loading = ref(true)   // 加载状态
+const products = ref([])    // 商品列表数据
+const currentUser = ref(null)  // 当前登录用户信息
+const searchQuery = ref('')    // 搜索关键词
+const viewMode = ref('grid')   // 视图模式：'grid' 网格视图 | 'list' 列表视图
+const unreadCount = ref(0)     // 未读消息数量
+
+/**
+ * 计算属性 - 统计数据
+ */
+// 商品总数
 const totalProducts = computed(() => products.value.length)
+// 在售商品数量
 const availableProducts = computed(() => products.value.filter(p => p.status === 'available').length)
+// 活跃用户数（去重后的卖家数）
 const activeUsers = computed(() => {
   const uniqueSellers = new Set(products.value.map(p => p.seller?.username).filter(Boolean))
   return uniqueSellers.size
 })
 
-// 获取当前登录用户
+/**
+ * 组件挂载时执行
+ * 1. 获取当前登录用户
+ * 2. 加载商品列表
+ */
 onMounted(() => {
+  // 从本地存储获取用户信息
   const userStr = localStorage.getItem('user')
   if (userStr) {
     currentUser.value = JSON.parse(userStr)
   } else {
+    // 未登录则跳转到登录页
     router.push('/login')
     return
   }
 
+  // 加载商品数据
   loadProducts()
 })
 
-// 加载商品列表
+/**
+ * 加载商品列表
+ * 调用后端 API 获取所有商品
+ */
 const loadProducts = async () => {
   loading.value = true
   try {
@@ -310,25 +340,37 @@ const loadProducts = async () => {
   }
 }
 
-// 搜索处理
+/**
+ * 搜索处理
+ * 根据关键词过滤商品列表
+ */
 const handleSearch = () => {
+  // 如果搜索词为空，重新加载所有商品
   if (!searchQuery.value.trim()) {
     loadProducts()
     return
   }
   
+  // 过滤商品名称包含关键词的商品
   const filtered = products.value.filter(product => 
     product.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
   products.value = filtered
 }
 
-// 获取默认图片
+/**
+ * 获取默认图片 URL
+ * @returns {string} 默认商品图片地址
+ */
 const getDefaultImage = () => {
   return 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop'
 }
 
-// 获取状态文本
+/**
+ * 获取状态文本
+ * @param {string} status - 商品状态码
+ * @returns {string} 中文状态描述
+ */
 const getStatusText = (status) => {
   const statusMap = {
     'available': '在售',
@@ -338,7 +380,11 @@ const getStatusText = (status) => {
   return statusMap[status] || status
 }
 
-// 格式化时间
+/**
+ * 格式化时间戳
+ * @param {string} time - ISO 格式的时间字符串
+ * @returns {string} 格式化后的时间描述（如：刚刚、5 分钟前、2 小时前）
+ */
 const formatTime = (time) => {
   if (!time) return ''
   const date = new Date(time)
@@ -351,21 +397,27 @@ const formatTime = (time) => {
   return `${Math.floor(diff / 86400000)}天前`
 }
 
-// 页面跳转
-const goToPublish = () => router.push('/publish')
-const goToChat = () => router.push('/chat')
-const goToProductDetail = (id) => router.push(`/product/${id}`)
+/**
+ * 页面跳转函数组
+ */
+const goToPublish = () => router.push('/publish')          // 跳转到发布商品页
+const goToChat = () => router.push('/chat')                // 跳转到聊天页
+const goToProductDetail = (id) => router.push(`/product/${id}`)  // 跳转到商品详情页
+const goToProfile = () => router.push('/profile')          // 跳转到个人信息页
 
-// 退出登录
+/**
+ * 退出登录
+ * 确认退出后清除本地存储的用户信息并跳转到登录页
+ */
 const handleLogout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
-    localStorage.removeItem('user')
+    localStorage.removeItem('user')  // 清除用户信息
     ElMessage.success('已退出登录')
-    router.push('/login')
+    router.push('/login')  // 跳转到登录页
   })
 }
 </script>
@@ -781,29 +833,31 @@ const handleLogout = () => {
 
 .product-image {
   position: relative;
-  height: 200px;
+  height: 220px;
   overflow: hidden;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .image {
   width: 100%;
   height: 100%;
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .product-card:hover .image {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .image-placeholder {
   width: 100%;
   height: 100%;
-  background: var(--neutral-100);
+  background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--neutral-400);
-  font-size: 2rem;
+  color: #059669;
+  font-size: 3rem;
+  opacity: 0.5;
 }
 
 .product-status {
@@ -944,16 +998,23 @@ const handleLogout = () => {
 }
 
 .product-list-image {
-  width: 120px;
-  height: 120px;
-  border-radius: var(--radius-base);
+  width: 140px;
+  height: 140px;
+  border-radius: 1rem;
   overflow: hidden;
   flex-shrink: 0;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08);
 }
 
 .list-image {
   width: 100%;
   height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.product-list-item:hover .list-image {
+  transform: scale(1.05);
 }
 
 .product-list-content {

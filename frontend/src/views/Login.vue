@@ -166,48 +166,83 @@ import { ElMessage } from 'element-plus'
 import { User, Lock, ArrowRight } from '@element-plus/icons-vue'
 import { login } from '@/api/user'
 
-const router = useRouter()
-const loginFormRef = ref(null)
-const loading = ref(false)
-const rememberMe = ref(false)
+/**
+ * Login.vue - 登录页面组件
+ * 
+ * 功能：
+ * 1. 提供用户登录表单
+ * 2. 验证用户输入
+ * 3. 调用后端 API 进行登录
+ * 4. 保存用户信息到本地存储
+ * 5. 跳转到首页
+ */
 
+const router = useRouter()  // 路由实例
+const loginFormRef = ref(null)  // 表单引用，用于表单验证
+const loading = ref(false)  // 登录按钮加载状态
+const rememberMe = ref(false)  // 是否记住我
+
+/**
+ * 登录表单数据
+ */
 const loginForm = reactive({
-  username: '',
-  password: ''
+  username: '',  // 用户名
+  password: ''   // 密码
 })
 
+/**
+ * 表单验证规则
+ */
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],  // 必填项
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]     // 必填项
 }
 
+/**
+ * 处理登录逻辑
+ * 1. 验证表单
+ * 2. 调用登录 API
+ * 3. 保存用户信息
+ * 4. 跳转到首页
+ */
 const handleLogin = async () => {
   if (!loginFormRef.value) return
 
   try {
+    // 表单验证
     const valid = await loginFormRef.value.validate()
     if (!valid) return
     
+    // 设置加载状态
     loading.value = true
+    
+    // 调用登录 API
     const res = await login(loginForm)
     
+    // 处理登录结果
     if (res.success) {
       ElMessage.success('登录成功')
+      // 保存用户信息到本地存储
       localStorage.setItem('user', JSON.stringify(res.user))
-      // 使用 replace 避免返回到登录页
+      // 跳转到首页，使用 replace 避免返回到登录页
       await router.replace('/home')
     } else {
       ElMessage.error(res.message || '登录失败')
     }
   } catch (error) {
+    // 错误处理
     if (error !== false) {
       ElMessage.error('登录失败：' + error.message)
     }
   } finally {
+    // 重置加载状态
     loading.value = false
   }
 }
 
+/**
+ * 跳转到注册页面
+ */
 const goToRegister = () => {
   router.push('/register')
 }

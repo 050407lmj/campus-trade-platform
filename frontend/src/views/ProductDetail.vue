@@ -58,8 +58,11 @@
               <el-image
                   :src="product.imageUrl || getDefaultImage()"
                   :alt="product.name"
-                  fit="cover"
+                  fit="contain"
                   class="gallery-image"
+                  :preview-src-list="[product.imageUrl || getDefaultImage()]"
+                  :initial-index="0"
+                  preview-teleported
               >
                 <template #error>
                   <div class="image-error">
@@ -67,11 +70,23 @@
                     <span>暂无图片</span>
                   </div>
                 </template>
+                <template #placeholder>
+                  <div class="image-loading">
+                    <el-icon class="is-loading"><Loading /></el-icon>
+                    <span>加载中...</span>
+                  </div>
+                </template>
               </el-image>
 
               <!-- 图片状态标签 -->
               <div class="image-status" :class="product.status">
                 {{ getStatusText(product.status) }}
+              </div>
+              
+              <!-- 图片预览提示 -->
+              <div class="image-preview-hint">
+                <el-icon><ZoomIn /></el-icon>
+                <span>点击查看大图</span>
               </div>
             </div>
           </section>
@@ -199,7 +214,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, ArrowRight, Share, Star, Picture, User, ChatDotRound,
-  ShoppingCart
+  ShoppingCart, Loading, ZoomIn
 } from '@element-plus/icons-vue'
 import { getProductById } from '@/api/product'
 import { createTradeRequest } from '@/api/trade'
@@ -232,7 +247,11 @@ const loadProductDetail = async () => {
   loading.value = true
   try {
     const res = await getProductById(productId)
-    if (res) {
+    // 后端返回 { success: true, data: { ... } }
+    if (res && res.success && res.data) {
+      product.value = res.data
+    } else if (res && res.id) {
+      // 兼容直接返回商品数据的情况
       product.value = res
     } else {
       ElMessage.error('商品不存在')
@@ -548,39 +567,105 @@ const goHome = () => {
 
 .main-image {
   position: relative;
-  border-radius: var(--radius-2xl);
+  border-radius: 1.5rem;
   overflow: hidden;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-lg);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
+  box-shadow: 
+    0 4px 6px -1px rgba(5, 150, 105, 0.1),
+    0 10px 20px -5px rgba(5, 150, 105, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(5, 150, 105, 0.1);
+}
+
+.main-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    transparent 70%, 
+    rgba(5, 150, 105, 0.03) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .main-image:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
+  transform: translateY(-6px);
+  box-shadow: 
+    0 8px 12px -2px rgba(5, 150, 105, 0.15),
+    0 20px 40px -10px rgba(5, 150, 105, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .gallery-image {
   width: 100%;
-  height: 400px;
+  height: 450px;
   display: block;
+  cursor: zoom-in;
+  transition: transform 0.4s ease;
+}
+
+.main-image:hover .gallery-image {
+  transform: scale(1.02);
 }
 
 .image-error {
   width: 100%;
   height: 100%;
-  background: var(--neutral-100);
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--neutral-400);
+  color: #9ca3af;
+  gap: 1rem;
 }
 
 .image-error .el-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
+  font-size: 4rem;
+  opacity: 0.5;
+}
+
+.image-loading {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
+  gap: 0.75rem;
+}
+
+.image-loading .el-icon {
+  font-size: 2rem;
+}
+
+.image-preview-hint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(5, 150, 105, 0.9);
+  backdrop-filter: blur(8px);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.main-image:hover .image-preview-hint {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
 }
 
 .image-status {

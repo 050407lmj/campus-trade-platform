@@ -220,6 +220,7 @@ import {
   Plus, Delete, Promotion
 } from '@element-plus/icons-vue'
 import { publishProduct } from '@/api/product'
+import { uploadFile } from '@/api/file'
 
 const router = useRouter()
 const fileInput = ref(null)
@@ -263,35 +264,48 @@ const triggerUpload = () => {
 }
 
 // 处理文件选择
-const handleFileChange = (event) => {
+const handleFileChange = async (event) => {
   const files = Array.from(event.target.files)
 
   if (publishForm.images.length + files.length > 5) {
-    ElMessage.warning('最多只能上传5张图片')
+    ElMessage.warning('最多只能上传 5 张图片')
     return
   }
 
-  files.forEach(file => {
+  for (const file of files) {
+    // 验证文件大小
     if (file.size > 5 * 1024 * 1024) {
       ElMessage.warning(`图片 ${file.name} 大小超过 5MB`)
-      return
+      continue
     }
 
+    // 验证文件类型
     if (!file.type.startsWith('image/')) {
       ElMessage.warning(`文件 ${file.name} 不是图片格式`)
-      return
+      continue
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      publishForm.images.push({
-        url: e.target.result,
-        name: file.name,
-        size: file.size
-      })
+    try {
+      // 上传到服务器
+      const res = await uploadFile(file)
+      
+      if (res.success && res.url) {
+        // 上传成功，添加到表单
+        publishForm.images.push({
+          url: res.url,  // 服务器返回的 URL
+          name: res.fileName,
+          size: res.size,
+          uploaded: true  // 标记已上传
+        })
+        ElMessage.success(`图片 ${file.name} 上传成功`)
+      } else {
+        ElMessage.error(res.message || '上传失败')
+      }
+    } catch (error) {
+      console.error('上传失败:', error)
+      ElMessage.error(`图片 ${file.name} 上传失败：${error.message}`)
     }
-    reader.readAsDataURL(file)
-  })
+  }
 
   event.target.value = ''
 }

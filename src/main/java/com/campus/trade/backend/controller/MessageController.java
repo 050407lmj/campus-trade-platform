@@ -11,23 +11,41 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
-@RestController
-@RequestMapping("/api/messages")
+/**
+ * 消息控制器（Controller）
+ * 
+ * 处理与聊天消息相关的 HTTP 请求，包括：
+ * - 发送消息（保存到数据库 + WebSocket 推送）
+ * - 获取聊天记录
+ * 
+ * @author Campus Trade Platform
+ * @version 1.0
+ */
+@RestController                              // RESTful 控制器注解
+@RequestMapping("/api/messages")          // 基础请求路径
 public class MessageController {
 
-    @Autowired
-    private MessageRepository messageRepository;
+    @Autowired                             // 自动依赖注入
+    private MessageRepository messageRepository;  // 消息数据访问层
 
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired                             // 自动依赖注入
+    private UserRepository userRepository;        // 用户数据访问层
 
-    @Autowired
-    private WebSocketChatHandler webSocketChatHandler;
+    @Autowired                             // 自动依赖注入
+    private WebSocketChatHandler webSocketChatHandler;  // WebSocket 聊天处理器
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();  // JSON 序列化工具
 
-    // 发送消息（同时保存到数据库 + WebSocket 推送）
-    @PostMapping
+    /**
+     * 发送消息
+     * 功能：
+     * 1. 保存消息到数据库
+     * 2. 通过 WebSocket 推送给接收者（如果在线）
+     * 
+     * @param messageData 消息数据（包含 senderId、receiverId、content）
+     * @return Map<String, Object> 发送结果（success、message、messageId）
+     */
+    @PostMapping                                      // POST 请求映射到 /api/messages
     public Map<String, Object> sendMessage(@RequestBody Map<String, Object> messageData) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -77,8 +95,14 @@ public class MessageController {
         return result;
     }
 
-    // 获取两个用户之间的聊天记录
-    @GetMapping("/between/{userId1}/{userId2}")
+    /**
+     * 获取两个用户之间的聊天记录
+     * 
+     * @param userId1 用户 1 的 ID
+     * @param userId2 用户 2 的 ID
+     * @return List<Map<String, Object>> 聊天记录列表，按时间升序排列
+     */
+    @GetMapping("/between/{userId1}/{userId2}")      // GET 请求映射到 /api/messages/between/{userId1}/{userId2}
     public List<Map<String, Object>> getChatHistory(@PathVariable Long userId1, @PathVariable Long userId2) {
         List<Message> messages = messageRepository.findBySenderIdAndReceiverIdOrderByCreateTimeAsc(userId1, userId2);
         List<Map<String, Object>> result = new ArrayList<>();

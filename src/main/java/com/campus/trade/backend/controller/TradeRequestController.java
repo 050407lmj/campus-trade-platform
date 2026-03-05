@@ -14,21 +14,37 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/trade-requests")
+/**
+ * 交易请求控制器（Controller）
+ * 
+ * 处理与交易请求相关的 HTTP 请求，包括：
+ * - 创建交易请求
+ * - 获取交易请求列表
+ * - 更新交易请求状态
+ * 
+ * @author Campus Trade Platform
+ * @version 1.0
+ */
+@RestController                                  // RESTful 控制器注解
+@RequestMapping("/api/trade-requests")          // 基础请求路径
 public class TradeRequestController {
 
-    @Autowired
-    private TradeRequestRepository tradeRequestRepository;
+    @Autowired                                   // 自动依赖注入
+    private TradeRequestRepository tradeRequestRepository;  // 交易请求数据访问层
 
-    @Autowired
-    private ProductRepository productRepository;
+    @Autowired                                   // 自动依赖注入
+    private ProductRepository productRepository;         // 商品数据访问层
 
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired                                   // 自动依赖注入
+    private UserRepository userRepository;             // 用户数据访问层
 
-    // 创建交易请求
-    @PostMapping
+    /**
+     * 创建交易请求
+     * 
+     * @param requestData 交易请求数据（包含 buyerId、productId）
+     * @return Map<String, Object> 创建结果（success、message、requestId）
+     */
+    @PostMapping                                      // POST 请求映射到 /api/trade-requests
     public Map<String, Object> createTradeRequest(@RequestBody Map<String, Object> requestData) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -60,8 +76,13 @@ public class TradeRequestController {
         return result;
     }
 
-    // 获取某商品的所有交易请求（修改版：避免循环引用）
-    @GetMapping("/product/{productId}")
+    /**
+     * 获取某商品的所有交易请求
+     * 
+     * @param productId 商品 ID
+     * @return List<Map<String, Object>> 交易请求列表，每个请求包含买家和商品信息
+     */
+    @GetMapping("/product/{productId}")            // GET 请求映射到 /api/trade-requests/product/{productId}
     public List<Map<String, Object>> getRequestsByProduct(@PathVariable Long productId) {
         List<TradeRequest> requests = tradeRequestRepository.findByProductIdOrderByCreateTimeDesc(productId);
         List<Map<String, Object>> result = new ArrayList<>();
@@ -94,8 +115,14 @@ public class TradeRequestController {
         return result;
     }
 
-    // 更新交易请求状态
-    @PutMapping("/{id}/status")
+    /**
+     * 更新交易请求状态
+     * 
+     * @param id 交易请求ID
+     * @param statusData 包含新状态的 Map（status 字段）
+     * @return Map<String, Object> 更新结果（success、message）
+     */
+    @PutMapping("/{id}/status")                    // PUT 请求映射到 /api/trade-requests/{id}/status
     public Map<String, Object> updateRequestStatus(@PathVariable Long id, @RequestBody Map<String, String> statusData) {
         Map<String, Object> result = new HashMap<>();
         TradeRequest request = tradeRequestRepository.findById(id).orElse(null);

@@ -94,4 +94,58 @@ public class UserController {
         }
         return user;
     }
+
+    // 获取用户详细信息（用于个人信息页面）
+    @GetMapping("/{id}/info")
+    public Map<String, Object> getUserInfo(@PathVariable Long id) {
+        Map<String, Object> result = new HashMap<>();
+        User user = userRepository.findById(id).orElse(null);
+        if (user != null) {
+            user.setPassword(null);  // 不返回密码
+            result.put("success", true);
+            result.put("user", user);
+        } else {
+            result.put("success", false);
+            result.put("message", "用户不存在");
+        }
+        return result;
+    }
+
+    // 更新用户信息
+    @PutMapping("/{id}")
+    public Map<String, Object> updateUserInfo(@PathVariable Long id, @RequestBody User updateUser) {
+        Map<String, Object> result = new HashMap<>();
+        
+        Optional<User> userOpt = userRepository.findById(id);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            
+            // 只更新允许修改的字段
+            if (updateUser.getWechatId() != null) {
+                user.setWechatId(updateUser.getWechatId());
+            }
+            if (updateUser.getWechatQrCodeUrl() != null) {
+                user.setWechatQrCodeUrl(updateUser.getWechatQrCodeUrl());
+            }
+            if (updateUser.getMajor() != null) {
+                user.setMajor(updateUser.getMajor());
+            }
+            if (updateUser.getGrade() != null) {
+                user.setGrade(updateUser.getGrade());
+            }
+            if (updateUser.getGender() != null) {
+                user.setGender(updateUser.getGender());
+            }
+            
+            userRepository.save(user);
+            user.setPassword(null);  // 不返回密码
+            result.put("success", true);
+            result.put("message", "用户信息更新成功");
+            result.put("user", user);
+        } else {
+            result.put("success", false);
+            result.put("message", "用户不存在");
+        }
+        return result;
+    }
 }

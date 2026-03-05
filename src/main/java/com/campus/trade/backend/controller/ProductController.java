@@ -12,18 +12,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/products")
+/**
+ * 商品控制器（Controller）
+ * 
+ * 处理与商品相关的 HTTP 请求，包括：
+ * - 发布商品
+ * - 获取商品列表
+ * - 获取商品详情
+ * - 更新商品状态
+ * 
+ * @author Campus Trade Platform
+ * @version 1.0
+ */
+@RestController                              // RESTful 控制器注解
+@RequestMapping("/api/products")          // 基础请求路径
 public class ProductController {
 
-    @Autowired
-    private ProductRepository productRepository;
+    @Autowired                             // 自动依赖注入
+    private ProductRepository productRepository;  // 商品数据访问层
 
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired                             // 自动依赖注入
+    private UserRepository userRepository;        // 用户数据访问层
 
-    // 发布商品
-    @PostMapping
+    /**
+     * 发布商品
+     * 
+     * @param productData 商品信息（包含 name、description、price、imageUrl、category、sellerId）
+     * @return Map<String, Object> 发布结果（success、message、id）
+     */
+    @PostMapping                                         // POST 请求映射到 /api/products
     public Map<String, Object> createProduct(@RequestBody Map<String, Object> productData) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -46,6 +63,7 @@ public class ProductController {
             product.setPrice(price);
             
             product.setImageUrl((String) productData.get("imageUrl"));
+            product.setCategory((String) productData.get("category"));
             product.setStatus("available");
 
             // 安全地处理卖家ID字段
@@ -72,7 +90,7 @@ public class ProductController {
             productRepository.save(product);
             result.put("success", true);
             result.put("message", "发布成功");
-            result.put("productId", product.getId());
+            result.put("id", product.getId()); // 兼容前端判断逻辑
         } catch (Exception e) {
             result.put("success", false);
             result.put("message", "发布失败：" + e.getMessage());
@@ -81,8 +99,12 @@ public class ProductController {
         return result;
     }
 
-    // 获取所有商品（修改版：避免循环引用）
-    @GetMapping
+    /**
+     * 获取所有商品列表
+     * 
+     * @return List<Map<String, Object>> 商品列表，每个商品包含基本信息和卖家信息
+     */
+    @GetMapping                                      // GET 请求映射到 /api/products
     public List<Map<String, Object>> getAllProducts() {
         List<Product> products = productRepository.findAllByOrderByCreateTimeDesc();
         List<Map<String, Object>> result = new ArrayList<>();
@@ -95,6 +117,8 @@ public class ProductController {
             map.put("price", product.getPrice());
             map.put("imageUrl", product.getImageUrl());
             map.put("status", product.getStatus());
+            map.put("category", product.getCategory());
+            map.put("createTime", product.getCreateTime());
 
             // 手动获取卖家信息，只放用户名和ID
             if (product.getSeller() != null) {
@@ -111,37 +135,60 @@ public class ProductController {
 
         return result;
     }
-
-    // 根据ID获取商品（修改版：避免循环引用）
-    @GetMapping("/{id}")
+    
+    /**
+     * 根据 ID 获取商品详情
+     * 
+     * @param id 商品 ID
+     * @return Map<String, Object> 商品详情（success、data 或 message）
+     */
+    @GetMapping("/{id}")                              // GET 请求映射到 /api/products/{id}
     public Map<String, Object> getProductById(@PathVariable Long id) {
-        Product product = productRepository.findById(id).orElse(null);
-        if (product == null) {
-            return null;
+        Map<String, Object> result = new HashMap<>();
+        try {
+            Product product = productRepository.findById(id).orElse(null);
+            if (product == null) {
+                result.put("success", false);
+                result.put("message", "商品不存在");
+                return result;
+            }
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", product.getId());
+            map.put("name", product.getName());
+            map.put("description", product.getDescription());
+            map.put("price", product.getPrice());
+            map.put("imageUrl", product.getImageUrl());
+            map.put("status", product.getStatus());
+            map.put("category", product.getCategory());
+            map.put("createTime", product.getCreateTime());
+
+            if (product.getSeller() != null) {
+                Map<String, Object> sellerMap = new HashMap<>();
+                sellerMap.put("id", product.getSeller().getId());
+                sellerMap.put("username", product.getSeller().getUsername());
+                map.put("seller", sellerMap);
+            } else {
+                map.put("seller", null);
+            }
+
+            result.put("success", true);
+            result.put("data", map);
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "获取商品详情失败：" + e.getMessage());
         }
-
-        Map<String, Object> map = new HashMap<>();
-        map.put("id", product.getId());
-        map.put("name", product.getName());
-        map.put("description", product.getDescription());
-        map.put("price", product.getPrice());
-        map.put("imageUrl", product.getImageUrl());
-        map.put("status", product.getStatus());
-
-        if (product.getSeller() != null) {
-            Map<String, Object> sellerMap = new HashMap<>();
-            sellerMap.put("id", product.getSeller().getId());
-            sellerMap.put("username", product.getSeller().getUsername());
-            map.put("seller", sellerMap);
-        } else {
-            map.put("seller", null);
-        }
-
-        return map;
+        return result;
     }
 
-    // 更新商品状态
-    @PutMapping("/{id}/status")
+    /**
+     * 更新商品状态
+     * 
+     * @param id 商品 ID
+     * @param statusData 包含新状态的 Map（status 字段）
+     * @return Map<String, Object> 更新结果（success、message）
+     */
+    @PutMapping("/{id}/status")                       // PUT 请求映射到 /api/products/{id}/status
     public Map<String, Object> updateProductStatus(@PathVariable Long id, @RequestBody Map<String, String> statusData) {
         Map<String, Object> result = new HashMap<>();
         Product product = productRepository.findById(id).orElse(null);

@@ -319,18 +319,23 @@ const initWebSocket = () => {
 
 // 处理 WebSocket 消息
 const handleWebSocketMessage = (data) => {
+  console.log('收到 WebSocket 消息:', data)
+  
   if (data.type === 'chat') {
     // 收到聊天消息
     if (currentContact.value &&
         (data.senderId === currentContact.value.id || data.receiverId === currentContact.value.id)) {
-      messages.value.push({
+      const newMessage = {
         id: data.id || Date.now(),
         senderId: data.senderId,
         receiverId: data.receiverId,
         content: data.content,
         createTime: data.createTime
-      })
+      }
+      messages.value.push(newMessage)
       scrollToBottom()
+      
+      console.log('添加新消息到当前对话:', newMessage)
     }
 
     // 更新联系人最后消息
@@ -341,6 +346,17 @@ const handleWebSocketMessage = (data) => {
       if (!currentContact.value || currentContact.value.id !== data.senderId) {
         contact.unreadCount = (contact.unreadCount || 0) + 1
       }
+      console.log('更新联系人消息状态:', contact.username)
+    }
+  } else if (data.type === 'welcome') {
+    console.log('WebSocket 连接成功:', data)
+    onlineCount.value = data.onlineCount || 1
+  } else if (data.type === 'userStatus') {
+    // 处理用户状态变化
+    const contact = contacts.value.find(c => c.id === data.userId)
+    if (contact) {
+      contact.isOnline = data.status === 'online'
+      console.log(`用户 ${contact.username} 状态更新为: ${data.status}`)
     }
   }
 }
