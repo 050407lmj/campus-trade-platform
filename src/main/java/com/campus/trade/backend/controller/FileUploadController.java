@@ -43,8 +43,8 @@ public class FileUploadController {
     // 允许的图片格式
     private static final Set<String> ALLOWED_EXTENSIONS = new HashSet<>(Arrays.asList("jpg", "jpeg", "png", "gif", "webp"));
     
-    // 最大文件大小：5MB
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    // 最大文件大小：10MB
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     /**
      * 单张图片上传

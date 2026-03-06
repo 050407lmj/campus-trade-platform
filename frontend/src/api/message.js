@@ -21,3 +21,22 @@ export function sendMessage(data) {
 export function getChatHistory(userId1, userId2) {
     return request.get(`/messages/between/${userId1}/${userId2}`)
 }
+
+/**
+ * 获取未读消息数量
+ * @param {number} userId - 用户ID
+ * @returns {Promise} 未读消息数量
+ */
+export function getUnreadCount(userId) {
+    return request.get(`/messages/unread/count/${userId}`)
+}
+
+/**
+ * 标记消息已读
+ * @param {number} userId - 当前用户ID
+ * @param {number} senderId - 发送者ID
+ * @returns {Promise} 操作结果
+ */
+export function markAsRead(userId, senderId) {
+    return request.post(`/messages/mark-read/${userId}/${senderId}`)
+}

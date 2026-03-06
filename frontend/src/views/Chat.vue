@@ -125,12 +125,6 @@
 
               <div class="chat-actions">
                 <el-button class="action-button" circle>
-                  <el-icon><Phone /></el-icon>
-                </el-button>
-                <el-button class="action-button" circle>
-                  <el-icon><VideoCamera /></el-icon>
-                </el-button>
-                <el-button class="action-button" circle>
                   <el-icon><More /></el-icon>
                 </el-button>
               </div>
@@ -164,10 +158,18 @@
                   <!-- 自己的消息 -->
                   <div v-else class="message-wrapper message-self-wrapper">
                     <div class="message-content">
-                      <div class="message-bubble message-bubble-self">
+                      <div class="message-bubble message-bubble-self" :class="{ 'message-failed': msg.status === 'failed' }">
                         <p class="message-text">{{ msg.content }}</p>
+                        <!-- 消息状态 -->
+                        <div class="message-status">
+                          <el-icon v-if="msg.status === 'sending'" class="is-loading"><Loading /></el-icon>
+                          <el-icon v-else-if="msg.status === 'failed'" class="status-failed" @click="retryMessage(msg)">
+                            <CircleClose />
+                          </el-icon>
+                        </div>
                       </div>
                       <span class="message-time">{{ formatMessageTime(msg.createTime) }}</span>
+                      <span v-if="msg.status === 'failed'" class="retry-hint" @click="retryMessage(msg)">点击重试</span>
                     </div>
                     <div class="message-avatar">
                       <el-avatar :size="32" icon="User">
@@ -183,12 +185,34 @@
             <div class="input-area">
               <div class="input-container">
                 <div class="input-toolbar">
-                  <el-button class="toolbar-button" circle>
+                  <el-button class="toolbar-button" circle title="发送图片">
                     <el-icon><Picture /></el-icon>
                   </el-button>
-                  <el-button class="toolbar-button" circle>
+                  <el-button class="toolbar-button" circle title="发送文件">
                     <el-icon><Paperclip /></el-icon>
                   </el-button>
+                  <!-- 表情快捷按钮 -->
+                  <el-popover
+                    placement="top"
+                    :width="280"
+                    trigger="click"
+                  >
+                    <template #reference>
+                      <el-button class="toolbar-button" circle title="发送表情">
+                        <span style="font-size: 1rem;">😊</span>
+                      </el-button>
+                    </template>
+                    <div class="emoji-grid">
+                      <span
+                        v-for="emoji in commonEmojis"
+                        :key="emoji"
+                        class="emoji-item"
+                        @click="insertEmoji(emoji)"
+                      >
+                        {{ emoji }}
+                      </span>
+                    </div>
+                  </el-popover>
                 </div>
 
                 <div class="input-wrapper">
@@ -196,9 +220,10 @@
                       v-model="messageInput"
                       type="textarea"
                       :rows="1"
-                      placeholder="输入消息..."
+                      placeholder="输入消息... (Enter发送, Shift+Enter换行)"
                       class="message-input"
-                      @keydown.enter.prevent="sendMessage"
+                      @keydown.enter.exact.prevent="sendMessage"
+                      @keydown.enter.shift.exact="() => {}"
                       resize="none"
                   />
                   <el-button
@@ -249,10 +274,10 @@ import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
-  ArrowLeft, Search, User, Phone, VideoCamera, More,
-  Picture, Paperclip, Microphone, Promotion, Message, Bell
+  ArrowLeft, Search, User, More,
+  Picture, Paperclip, Promotion, Message, Bell, Loading, CircleClose
 } from '@element-plus/icons-vue'
-import { getChatHistory, sendMessage as sendMsgApi } from '@/api/message'
+import { getChatHistory, sendMessage as sendMsgApi, markAsRead } from '@/api/message'
 import { getAllUsers } from '@/api/user'
 
 const router = useRouter()
@@ -265,6 +290,21 @@ const contacts = ref([])
 const messages = ref([])
 const websocket = ref(null)
 const onlineCount = ref(0)
+
+// 常用表情
+const commonEmojis = [
+  '😊', '😂', '🥰', '😍', '🤗', '😎',
+  '👍', '👎', '👏', '🙏', '💪', '✌️',
+  '❤️', '💔', '💕', '💖', '💗', '💝',
+  '🎉', '🎊', '🎁', '🎈', '✨', '🌟',
+  '🔥', '💯', '💢', '💣', '💥', '💦',
+  '🤔', '😅', '😆', '😋', '🤣', '😇'
+]
+
+// 插入表情
+const insertEmoji = (emoji) => {
+  messageInput.value += emoji
+}
 
 // 计算属性
 const filteredContacts = computed(() => {
@@ -392,6 +432,15 @@ const selectContact = async (contact) => {
         new Date(a.createTime).getTime() - new Date(b.createTime).getTime()
     )
 
+    // 标记消息已读
+    if (contact.lastMessage && contact.lastMessage !== '暂无消息') {
+      try {
+        await markAsRead(currentUser.value.id, contact.id)
+      } catch (e) {
+        console.log('标记已读失败:', e)
+      }
+    }
+
     await nextTick()
     scrollToBottom()
   } catch (error) {
@@ -405,6 +454,24 @@ const sendMessage = async () => {
 
   const messageContent = messageInput.value.trim()
 
+  // 创建临时消息对象（乐观更新）
+  const tempId = 'temp_' + Date.now()
+  const tempMessage = {
+    id: tempId,
+    senderId: currentUser.value.id,
+    receiverId: currentContact.value.id,
+    content: messageContent,
+    createTime: new Date().toISOString(),
+    status: 'sending' // sending, sent, failed
+  }
+
+  // 立即添加到消息列表
+  messages.value.push(tempMessage)
+  messageInput.value = ''
+
+  await nextTick()
+  scrollToBottom()
+
   try {
     const res = await sendMsgApi({
       senderId: currentUser.value.id,
@@ -413,27 +480,58 @@ const sendMessage = async () => {
     })
 
     if (res.success || res.id) {
-      const newMessage = {
-        id: res.id || Date.now(),
-        senderId: currentUser.value.id,
-        receiverId: currentContact.value.id,
-        content: messageContent,
-        createTime: new Date().toISOString()
+      // 更新消息状态
+      const msgIndex = messages.value.findIndex(m => m.id === tempId)
+      if (msgIndex !== -1) {
+        messages.value[msgIndex].id = res.messageId || tempId
+        messages.value[msgIndex].status = 'sent'
       }
 
-      messages.value.push(newMessage)
-
+      // 更新联系人最后消息
       const contact = contacts.value.find(c => c.id === currentContact.value.id)
       if (contact) {
         contact.lastMessage = messageContent
-        contact.lastMessageTime = newMessage.createTime
+        contact.lastMessageTime = tempMessage.createTime
       }
 
-      messageInput.value = ''
       await nextTick()
       scrollToBottom()
+    } else {
+      throw new Error(res.message || '发送失败')
     }
   } catch (error) {
+    // 更新消息状态为失败
+    const msgIndex = messages.value.findIndex(m => m.id === tempId)
+    if (msgIndex !== -1) {
+      messages.value[msgIndex].status = 'failed'
+    }
+    ElMessage.error('发送失败：' + error.message)
+  }
+}
+
+// 重试发送失败的消息
+const retryMessage = async (msg) => {
+  if (msg.status !== 'failed') return
+
+  // 更新状态为发送中
+  msg.status = 'sending'
+
+  try {
+    const res = await sendMsgApi({
+      senderId: currentUser.value.id,
+      receiverId: currentContact.value.id,
+      content: msg.content
+    })
+
+    if (res.success || res.id) {
+      msg.id = res.messageId || msg.id
+      msg.status = 'sent'
+      ElMessage.success('消息发送成功')
+    } else {
+      throw new Error(res.message || '发送失败')
+    }
+  } catch (error) {
+    msg.status = 'failed'
     ElMessage.error('发送失败：' + error.message)
   }
 }
@@ -1041,6 +1139,8 @@ watch(messages, () => {
   color: white;
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
   border: none;
+  display: flex;
+  align-items: center;
 }
 
 .message-bubble-self:hover {
@@ -1063,6 +1163,63 @@ watch(messages, () => {
 
 .message-self-wrapper .message-time {
   text-align: right;
+}
+
+/* 消息状态 */
+.message-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.5rem;
+}
+
+.message-status .el-icon {
+  font-size: 0.875rem;
+}
+
+.message-status .status-failed {
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.message-status .status-failed:hover {
+  transform: scale(1.2);
+}
+
+.message-failed {
+  background: linear-gradient(135deg, #fca5a5, #f87171) !important;
+}
+
+.retry-hint {
+  font-size: 0.75rem;
+  color: #ef4444;
+  cursor: pointer;
+  margin-top: 0.25rem;
+}
+
+.retry-hint:hover {
+  text-decoration: underline;
+}
+
+/* 表情选择器 */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.25rem;
+}
+
+.emoji-item {
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.emoji-item:hover {
+  background: rgba(5, 150, 105, 0.1);
+  transform: scale(1.2);
 }
 
 /* 输入区域 */

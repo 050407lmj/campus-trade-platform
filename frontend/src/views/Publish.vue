@@ -274,8 +274,8 @@ const handleFileChange = async (event) => {
 
   for (const file of files) {
     // 验证文件大小
-    if (file.size > 5 * 1024 * 1024) {
-      ElMessage.warning(`图片 ${file.name} 大小超过 5MB`)
+    if (file.size > 10 * 1024 * 1024) {
+      ElMessage.warning(`图片 ${file.name} 大小超过 10MB`)
       continue
     }
 

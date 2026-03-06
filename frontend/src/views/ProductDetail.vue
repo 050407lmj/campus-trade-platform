@@ -172,8 +172,14 @@
         <footer class="detail-footer" v-if="product">
           <div class="footer-container">
             <div class="footer-left">
-              <el-button class="footer-button" circle>
-                <el-icon><Star /></el-icon>
+              <el-button 
+                class="footer-button favorite-button" 
+                :class="{ 'is-favorited': isFavorited }"
+                circle 
+                @click="toggleFavorite"
+                :loading="favoriteLoading"
+              >
+                <el-icon><StarFilled v-if="isFavorited" /><Star v-else /></el-icon>
               </el-button>
               <el-button class="footer-button" circle>
                 <el-icon><Share /></el-icon>
@@ -181,25 +187,59 @@
             </div>
 
             <div class="footer-right">
-              <el-button
-                  v-if="product?.status === 'available'"
-                  type="primary"
-                  size="large"
-                  class="buy-button"
-                  @click="handleBuyRequest"
-              >
-                <el-icon><ShoppingCart /></el-icon>
-                我想要
-              </el-button>
+              <!-- 卖家视角：显示管理按钮 -->
+              <template v-if="isOwner">
+                <el-button
+                    v-if="product?.status === 'available'"
+                    size="large"
+                    class="offline-button"
+                    @click="handleOffline"
+                >
+                  <el-icon><Remove /></el-icon>
+                  下架商品
+                </el-button>
+                <el-button
+                    v-else-if="product?.status === 'offline'"
+                    type="primary"
+                    size="large"
+                    class="relist-button"
+                    @click="handleRelist"
+                >
+                  <el-icon><RefreshRight /></el-icon>
+                  重新上架
+                </el-button>
+                <el-button
+                    size="large"
+                    class="delete-button"
+                    @click="handleDelete"
+                >
+                  <el-icon><Delete /></el-icon>
+                  删除商品
+                </el-button>
+              </template>
+              
+              <!-- 买家视角：显示购买按钮 -->
+              <template v-else>
+                <el-button
+                    v-if="product?.status === 'available'"
+                    type="primary"
+                    size="large"
+                    class="buy-button"
+                    @click="handleBuyRequest"
+                >
+                  <el-icon><ShoppingCart /></el-icon>
+                  我想要
+                </el-button>
 
-              <el-button
-                  v-else
-                  size="large"
-                  class="disabled-button"
-                  disabled
-              >
-                {{ getStatusText(product?.status) }}
-              </el-button>
+                <el-button
+                    v-else
+                    size="large"
+                    class="disabled-button"
+                    disabled
+                >
+                  {{ getStatusText(product?.status) }}
+                </el-button>
+              </template>
             </div>
           </div>
         </footer>
@@ -209,21 +249,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ArrowLeft, ArrowRight, Share, Star, Picture, User, ChatDotRound,
-  ShoppingCart, Loading, ZoomIn
+  ArrowLeft, ArrowRight, Share, Star, StarFilled, Picture, User, ChatDotRound,
+  ShoppingCart, Loading, ZoomIn, Remove, RefreshRight, Delete
 } from '@element-plus/icons-vue'
-import { getProductById } from '@/api/product'
+import { getProductById, updateProductStatus, deleteProduct } from '@/api/product'
 import { createTradeRequest } from '@/api/trade'
+import { addFavorite, removeFavorite, checkFavorite } from '@/api/favorite'
 
 const router = useRouter()
 const route = useRoute()
 const loading = ref(true)
 const product = ref(null)
 const currentUser = ref(null)
+const isFavorited = ref(false)
+const favoriteLoading = ref(false)
+
+// 判断当前用户是否是商品发布者
+const isOwner = computed(() => {
+  return currentUser.value && product.value && 
+         currentUser.value.id === product.value.seller?.id
+})
 
 // 初始化
 onMounted(() => {
@@ -257,12 +306,74 @@ const loadProductDetail = async () => {
       ElMessage.error('商品不存在')
       router.push('/home')
     }
+    
+    // 检查收藏状态
+    if (currentUser.value && product.value && !isOwner.value) {
+      checkFavoriteStatus()
+    }
   } catch (error) {
     console.error('加载商品详情失败:', error)
     ElMessage.error('加载商品详情失败')
     router.push('/home')
   } finally {
     loading.value = false
+  }
+}
+
+// 检查收藏状态
+const checkFavoriteStatus = async () => {
+  if (!currentUser.value || !product.value) return
+  
+  try {
+    const res = await checkFavorite(currentUser.value.id, product.value.id)
+    if (res.success) {
+      isFavorited.value = res.isFavorited
+    }
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
+}
+
+// 切换收藏状态
+const toggleFavorite = async () => {
+  if (!currentUser.value) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  if (isOwner.value) {
+    ElMessage.warning('不能收藏自己的商品')
+    return
+  }
+  
+  favoriteLoading.value = true
+  
+  try {
+    if (isFavorited.value) {
+      // 取消收藏
+      const res = await removeFavorite(currentUser.value.id, product.value.id)
+      if (res.success) {
+        isFavorited.value = false
+        ElMessage.success('已取消收藏')
+      } else {
+        ElMessage.error(res.message || '取消收藏失败')
+      }
+    } else {
+      // 添加收藏
+      const res = await addFavorite(currentUser.value.id, product.value.id)
+      if (res.success) {
+        isFavorited.value = true
+        ElMessage.success('收藏成功')
+      } else {
+        ElMessage.error(res.message || '收藏失败')
+      }
+    }
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    ElMessage.error('操作失败，请重试')
+  } finally {
+    favoriteLoading.value = false
   }
 }
 
@@ -276,7 +387,8 @@ const getStatusText = (status) => {
   const statusMap = {
     'available': '在售',
     'sold': '已售出',
-    'reserved': '已预订'
+    'reserved': '已预订',
+    'offline': '已下架'
   }
   return statusMap[status] || status
 }
@@ -286,7 +398,8 @@ const getStatusTagType = (status) => {
   const typeMap = {
     'available': 'success',
     'sold': 'danger',
-    'reserved': 'warning'
+    'reserved': 'warning',
+    'offline': 'info'
   }
   return typeMap[status] || 'info'
 }
@@ -373,6 +486,92 @@ const goBack = () => {
 // 返回首页
 const goHome = () => {
   router.push('/home')
+}
+
+// 下架商品
+const handleOffline = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要下架此商品吗？下架后其他用户将无法看到此商品。',
+      '下架商品',
+      {
+        confirmButtonText: '确定下架',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const res = await updateProductStatus(product.value.id, 'offline')
+    if (res.success) {
+      ElMessage.success('商品已下架')
+      product.value.status = 'offline'
+    } else {
+      ElMessage.error(res.message || '下架失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('下架失败:', error)
+      ElMessage.error('下架失败')
+    }
+  }
+}
+
+// 重新上架
+const handleRelist = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要重新上架此商品吗？',
+      '重新上架',
+      {
+        confirmButtonText: '确定上架',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    const res = await updateProductStatus(product.value.id, 'available')
+    if (res.success) {
+      ElMessage.success('商品已重新上架')
+      product.value.status = 'available'
+    } else {
+      ElMessage.error(res.message || '上架失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('上架失败:', error)
+      ElMessage.error('上架失败')
+    }
+  }
+}
+
+// 删除商品
+const handleDelete = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除此商品吗？删除后将无法恢复！',
+      '删除商品',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'error'
+      }
+    )
+
+    const res = await deleteProduct(product.value.id)
+    if (res.success) {
+      ElMessage.success('商品已删除')
+      setTimeout(() => {
+        router.push('/home')
+      }, 1000)
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 </script>
 
@@ -692,6 +891,10 @@ const goHome = () => {
   background: rgba(245, 158, 11, 0.9);
 }
 
+.image-status.offline {
+  background: rgba(107, 114, 128, 0.9);
+}
+
 /* 商品信息区域 */
 .product-info {
   display: flex;
@@ -923,6 +1126,18 @@ const goHome = () => {
   border-color: #059669;
 }
 
+.favorite-button.is-favorited {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  border-color: #f59e0b;
+  color: white;
+}
+
+.favorite-button.is-favorited:hover {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
 .buy-button {
   background: linear-gradient(135deg, #059669, #10b981);
   border: none;
@@ -944,6 +1159,55 @@ const goHome = () => {
   color: var(--neutral-500);
   padding: var(--space-3) var(--space-8);
   cursor: not-allowed;
+}
+
+/* 卖家操作按钮 */
+.offline-button {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+  padding: var(--space-3) var(--space-6);
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.3s ease;
+}
+
+.offline-button:hover {
+  background: #dc2626;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.relist-button {
+  background: linear-gradient(135deg, #059669, #10b981);
+  border: none;
+  color: white;
+  padding: var(--space-3) var(--space-6);
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+}
+
+.relist-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
+}
+
+.delete-button {
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  color: #6b7280;
+  padding: var(--space-3) var(--space-6);
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.3s ease;
+}
+
+.delete-button:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 /* 响应式设计 */

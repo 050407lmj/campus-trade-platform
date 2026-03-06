@@ -69,13 +69,19 @@
       <div class="form-wrapper">
         <!-- 移动端标题 -->
         <div class="mobile-header">
-          <h1 class="mobile-title">创建账号</h1>
-          <p class="mobile-subtitle">填写信息开始使用</p>
+          <div class="mobile-logo">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h1 class="mobile-title">校园交易平台</h1>
+          <p class="mobile-subtitle">创建账号开始使用</p>
         </div>
         
         <!-- 注册卡片 -->
         <div class="register-card">
-          <div class="card-header">
+          <div class="card-header desktop-only">
             <h2 class="card-title">注册账号</h2>
             <p class="card-subtitle">请填写以下信息完成注册</p>
           </div>
@@ -528,6 +534,9 @@ const goToLogin = () => {
 .mobile-header {
   text-align: center;
   margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 @media (min-width: 1024px) {
@@ -536,17 +545,46 @@ const goToLogin = () => {
   }
 }
 
+.mobile-logo {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #059669, #10b981);
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+}
+
+.mobile-logo svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+}
+
 .mobile-title {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #111827;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.375rem 0;
 }
 
 .mobile-subtitle {
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: #6b7280;
   margin: 0;
+}
+
+/* 桌面端显示控制 */
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 1023px) {
+  .desktop-only {
+    display: none;
+  }
 }
 
 /* 注册卡片 */
@@ -834,6 +872,310 @@ const goToLogin = () => {
   
   .card-title {
     font-size: 1.25rem;
+  }
+}
+
+/* ==================== 移动端深度优化 ==================== */
+
+/* 平板设备 */
+@media (max-width: 1024px) {
+  .register-container {
+    flex-direction: column;
+  }
+  
+  .register-decoration {
+    display: none;
+  }
+  
+  .register-form-section {
+    width: 100%;
+    padding: 2rem 1.5rem;
+  }
+  
+  .form-wrapper {
+    max-width: 480px;
+  }
+}
+
+/* 大手机/小平板 */
+@media (max-width: 768px) {
+  .register-form-section {
+    padding: 1.5rem 1rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+  
+  .mobile-header {
+    margin-bottom: 1.25rem;
+  }
+  
+  .mobile-title {
+    font-size: 1.375rem;
+  }
+  
+  .register-card {
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+  }
+  
+  .card-header {
+    margin-bottom: 1.25rem;
+  }
+  
+  .card-title {
+    font-size: 1.125rem;
+  }
+  
+  /* 输入框移动端优化 */
+  .input-wrapper {
+    padding: 0 0.875rem;
+    min-height: 50px;
+  }
+  
+  .custom-input :deep(.el-input__inner) {
+    height: 50px;
+    font-size: 16px !important;
+  }
+  
+  .input-icon {
+    font-size: 20px;
+  }
+  
+  /* 按钮移动端优化 */
+  .submit-btn {
+    height: 52px;
+    font-size: 1rem;
+  }
+  
+  .login-btn {
+    height: 48px;
+    font-size: 0.938rem;
+  }
+  
+  .footer-info {
+    margin-top: 1.25rem;
+  }
+}
+
+/* 手机设备 */
+@media (max-width: 640px) {
+  .register-container {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  .register-form-section {
+    padding: 1rem;
+    padding-top: 1.5rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+  
+  .mobile-header {
+    margin-bottom: 1rem;
+  }
+  
+  .mobile-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  
+  .mobile-subtitle {
+    font-size: 0.875rem;
+  }
+  
+  .register-card {
+    padding: 1rem;
+    border-radius: 0.625rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  
+  .card-header {
+    margin-bottom: 1rem;
+  }
+  
+  .card-title {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .card-subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .form-field {
+    margin-bottom: 0.25rem;
+  }
+  
+  .field-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .input-wrapper {
+    min-height: 48px;
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+  }
+  
+  .custom-input :deep(.el-input__inner) {
+    height: 48px;
+    font-size: 16px !important;
+  }
+  
+  .form-options {
+    margin-bottom: 1rem;
+  }
+  
+  .form-options :deep(.el-checkbox__label) {
+    font-size: 0.75rem;
+  }
+  
+  .submit-btn {
+    height: 50px;
+    font-size: 0.938rem;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .divider-text {
+    font-size: 0.75rem;
+  }
+  
+  .login-section {
+    padding: 0;
+  }
+  
+  .login-text {
+    font-size: 0.813rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .login-btn {
+    height: 48px;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+  }
+  
+  .footer-info {
+    margin-top: 1rem;
+  }
+  
+  .footer-info p {
+    font-size: 0.625rem;
+  }
+}
+
+/* 小屏幕手机 */
+@media (max-width: 375px) {
+  .register-form-section {
+    padding: 0.75rem;
+    padding-top: 1rem;
+  }
+  
+  .mobile-title {
+    font-size: 1.125rem;
+  }
+  
+  .register-card {
+    padding: 0.875rem;
+  }
+  
+  .card-title {
+    font-size: 0.938rem;
+  }
+  
+  .input-wrapper {
+    min-height: 46px;
+    padding: 0 0.625rem;
+  }
+  
+  .custom-input :deep(.el-input__inner) {
+    height: 46px;
+    font-size: 15px !important;
+  }
+  
+  .submit-btn,
+  .login-btn {
+    height: 48px;
+  }
+}
+
+/* 横屏手机优化 */
+@media (max-width: 896px) and (orientation: landscape) {
+  .register-container {
+    min-height: auto;
+    padding: 0.5rem 0;
+  }
+  
+  .register-form-section {
+    padding: 0.75rem;
+    align-items: center;
+  }
+  
+  .form-wrapper {
+    max-width: 100%;
+  }
+  
+  .mobile-header {
+    margin-bottom: 0.75rem;
+  }
+  
+  .register-card {
+    padding: 0.875rem 1rem;
+  }
+  
+  .card-header {
+    margin-bottom: 0.75rem;
+  }
+  
+  .form-options {
+    margin-bottom: 0.75rem;
+  }
+  
+  .divider {
+    margin: 0.75rem 0;
+  }
+  
+  .footer-info {
+    margin-top: 0.75rem;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  .input-wrapper:hover {
+    border-color: #e5e7eb;
+    background: #f9fafb;
+  }
+  
+  .submit-btn:hover,
+  .login-btn:hover {
+    transform: none;
+  }
+  
+  .submit-btn:active {
+    transform: scale(0.98);
+  }
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .hero-icon,
+  .pattern-circle,
+  .shape,
+  .hero-content {
+    animation: none !important;
+  }
+  
+  .submit-btn,
+  .login-btn,
+  .input-wrapper {
+    transition: none !important;
   }
 }
 </style>

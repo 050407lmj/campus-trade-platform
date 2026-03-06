@@ -35,4 +35,23 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      * @return List<Message> 消息列表
      */
     List<Message> findBySenderIdOrReceiverIdOrderByCreateTimeDesc(Long senderId, Long receiverId);
+
+    /**
+     * 获取用户未读消息数量
+     * 
+     * @param receiverId 接收者 ID
+     * @param isRead 是否已读
+     * @return 未读消息数量
+     */
+    int countByReceiverIdAndIsRead(Long receiverId, boolean isRead);
+
+    /**
+     * 获取两个用户之间的未读消息
+     * 
+     * @param senderId 发送者 ID
+     * @param receiverId 接收者 ID
+     * @param isRead 是否已读
+     * @return 未读消息列表
+     */
+    List<Message> findBySenderIdAndReceiverIdAndIsRead(Long senderId, Long receiverId, boolean isRead);
 }

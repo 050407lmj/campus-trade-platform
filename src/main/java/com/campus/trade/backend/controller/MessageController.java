@@ -126,4 +126,45 @@ public class MessageController {
 
         return result;
     }
+
+    /**
+     * 获取用户未读消息数量
+     * 
+     * @param userId 用户ID
+     * @return Map<String, Object> 未读消息数量
+     */
+    @GetMapping("/unread/count/{userId}")
+    public Map<String, Object> getUnreadCount(@PathVariable Long userId) {
+        Map<String, Object> result = new HashMap<>();
+        int count = messageRepository.countByReceiverIdAndIsRead(userId, false);
+        result.put("success", true);
+        result.put("count", count);
+        return result;
+    }
+
+    /**
+     * 标记消息已读
+     * 
+     * @param userId 当前用户ID
+     * @param senderId 发送者ID
+     * @return Map<String, Object> 操作结果
+     */
+    @PostMapping("/mark-read/{userId}/{senderId}")
+    public Map<String, Object> markAsRead(@PathVariable Long userId, @PathVariable Long senderId) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            List<Message> unreadMessages = messageRepository.findBySenderIdAndReceiverIdAndIsRead(senderId, userId, false);
+            for (Message msg : unreadMessages) {
+                msg.setIsRead(true);
+            }
+            messageRepository.saveAll(unreadMessages);
+            result.put("success", true);
+            result.put("message", "已标记为已读");
+            result.put("count", unreadMessages.size());
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "标记失败：" + e.getMessage());
+        }
+        return result;
+    }
 }

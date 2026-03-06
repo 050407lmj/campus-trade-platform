@@ -203,4 +203,52 @@ public class ProductController {
         result.put("message", "更新成功");
         return result;
     }
+
+    /**
+     * 获取用户自己发布的商品列表
+     * 
+     * @param sellerId 卖家ID
+     * @return List<Map<String, Object>> 商品列表
+     */
+    @GetMapping("/my/{sellerId}")
+    public List<Map<String, Object>> getMyProducts(@PathVariable Long sellerId) {
+        List<Product> products = productRepository.findBySellerIdOrderByCreateTimeDesc(sellerId);
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Product product : products) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", product.getId());
+            map.put("name", product.getName());
+            map.put("description", product.getDescription());
+            map.put("price", product.getPrice());
+            map.put("imageUrl", product.getImageUrl());
+            map.put("status", product.getStatus());
+            map.put("category", product.getCategory());
+            map.put("createTime", product.getCreateTime());
+            result.add(map);
+        }
+
+        return result;
+    }
+
+    /**
+     * 删除商品（下架）
+     * 
+     * @param id 商品 ID
+     * @return Map<String, Object> 删除结果
+     */
+    @DeleteMapping("/{id}")
+    public Map<String, Object> deleteProduct(@PathVariable Long id) {
+        Map<String, Object> result = new HashMap<>();
+        Product product = productRepository.findById(id).orElse(null);
+        if (product == null) {
+            result.put("success", false);
+            result.put("message", "商品不存在");
+            return result;
+        }
+        productRepository.delete(product);
+        result.put("success", true);
+        result.put("message", "商品已下架");
+        return result;
+    }
 }

@@ -29,6 +29,9 @@ public class Product {
     @Column(nullable = false)
     private String status; // 商品状态
 
+    @Column(length = 50)
+    private String category; // 商品分类
+
     // 2. 在这里添加 @JsonIgnoreProperties 注解
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id", nullable = false)

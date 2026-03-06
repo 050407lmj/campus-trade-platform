@@ -35,9 +35,27 @@ export function getProductById(id) {
 /**
  * 更新商品状态
  * @param {number} id - 商品ID
- * @param {string} status - 新状态（available/sold/reserved）
+ * @param {string} status - 新状态（available/sold/reserved/offline）
  * @returns {Promise} 更新结果
  */
 export function updateProductStatus(id, status) {
-    return request.put(`/api/products/${id}/status`, { status })
+    return request.put(`/products/${id}/status`, { status })
+}
+
+/**
+ * 获取用户自己发布的商品
+ * @param {number} sellerId - 卖家ID
+ * @returns {Promise} 商品列表
+ */
+export function getMyProducts(sellerId) {
+    return request.get(`/products/my/${sellerId}`)
+}
+
+/**
+ * 删除商品（下架）
+ * @param {number} id - 商品ID
+ * @returns {Promise} 删除结果
+ */
+export function deleteProduct(id) {
+    return request.delete(`/products/${id}`)
 }
